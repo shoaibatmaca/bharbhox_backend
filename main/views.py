@@ -231,6 +231,25 @@ class SignupWithDogView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+# class OrderCheckoutView(APIView):
+#     def post(self, request):
+#         from .models import MonthlyBox
+#         serializer = OrderSerializer(data=request.data)
+#         if serializer.is_valid():
+#             today = date.today()
+#             try:
+#                 box = MonthlyBox.objects.get(month=today.month, year=today.year)
+#             except MonthlyBox.DoesNotExist:
+#                 return Response({'error': 'No MonthlyBox defined for this month'}, status=400)
+
+#             order = serializer.save()
+#             order.monthly_box = box
+#             order.save()
+
+#             return Response({'order_id': order.id, 'message': 'Order placed successfully'}, status=201)
+#         return Response(serializer.errors, status=400)
+
+
 class OrderCheckoutView(APIView):
     def post(self, request):
         from .models import MonthlyBox
