@@ -1,5 +1,5 @@
 from django.contrib import admin
-from main.models import *
+from .models import *
 from django.core.mail import EmailMessage
 from django.conf import settings
 
