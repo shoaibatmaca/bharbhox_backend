@@ -49,6 +49,12 @@ class MonthlyBox(models.Model):
     def __str__(self):
         return f"{self.name} ({self.day}/{self.month}/{self.year})"
 
+    @property
+    def image_public_url(self):
+        if self.image:
+            return f"https://pub-73f82101c9e54e9b960f80a91111f8c6.r2.dev/{self.image.name}"
+        return None
+
     def update_rating(self, new_rating):
         self.total_ratings += 1
         self.rating_sum += new_rating

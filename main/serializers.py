@@ -66,10 +66,6 @@ class UserProfileSerializer(serializers.ModelSerializer):
         extra_kwargs = {'email': {'read_only': True}}
 
 
-# class DogSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Dog
-#         exclude = ['owner']  # or use fields explicitly
 
 
 class DogSerializer(serializers.ModelSerializer):
@@ -115,11 +111,8 @@ class OrderBoxHistorySerializer(serializers.ModelSerializer):
         fields = ['id', 'box_name', 'box_theme', 'box_image_url', 'month', 'year', 'status', 'rating']
 
     def get_box_image_url(self, obj):
-        request = self.context.get('request')
-        image = obj.monthly_box.image if obj.monthly_box else None
-        if image and hasattr(image, 'url'):
-            return request.build_absolute_uri(image.url) if request else image.url
-        return None
+        return obj.monthly_box.image_public_url if obj.monthly_box else None
+
 
     def get_month(self, obj):
         return obj.monthly_box.month if obj.monthly_box else None
