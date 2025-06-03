@@ -1,0 +1,488 @@
+# from rest_framework.views import APIView
+# from rest_framework.response import Response
+# from rest_framework import status
+# from .serializers import SignupSerializer
+# from rest_framework.views import APIView
+# from rest_framework.response import Response
+# from rest_framework import status
+# from main.serializers import SignupSerializer
+# from django.core.mail import EmailMessage
+# from django.conf import settings
+# from django.template.loader import render_to_string  # Optional if using template rendering
+
+
+# # class SignupWithDogView(APIView):
+# #     def post(self, request):
+# #         serializer = SignupSerializer(data=request.data)
+# #         if serializer.is_valid():
+# #             result = serializer.save()
+# #             return Response(result, status=status.HTTP_201_CREATED)
+# #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# class SignupWithDogView(APIView):
+#     def post(self, request):
+#         serializer = SignupSerializer(data=request.data)
+#         if serializer.is_valid():
+#             result = serializer.save()
+
+#             # ✅ Send welcome email
+#             user_email = result["user"]["email"]
+#             user_name = user_email.split("@")[0].capitalize()
+
+#             html_content = f"""
+#                 <div style="font-family:Arial,sans-serif;padding:20px;background:#f9f9f9;">
+#                     <h2 style="color:#4CAF50;">Welcome to BarkBox, {user_name}!</h2>
+#                     <p>Thanks for signing up. We’re excited to send goodies your dog will love 🐶</p>
+#                     <p>Explore your dashboard and update your preferences anytime.</p>
+#                     <p style="margin-top:30px;">Cheers,<br/>The BarkBox Team</p>
+#                 </div>
+#             """
+
+#             try:
+#                 email = EmailMessage(
+#                     subject="🎉 Welcome to BarkBox!",
+#                     body=html_content,
+#                     from_email=settings.DEFAULT_FROM_EMAIL,
+#                     to=[user_email],
+#                 )
+#                 email.content_subtype = "html"
+#                 email.send()
+#             except Exception as e:
+#                 print(f"❌ Failed to send welcome email: {e}")
+
+#             return Response(result, status=status.HTTP_201_CREATED)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+# from rest_framework.views import APIView
+# from rest_framework.response import Response
+# from rest_framework import status
+# from .serializers import OrderSerializer
+
+# class OrderCheckoutView(APIView):
+#     def post(self, request):
+#         serializer = OrderSerializer(data=request.data)
+#         if serializer.is_valid():
+#             order = serializer.save()
+#             return Response({'order_id': order.id, 'message': 'Order placed successfully'}, status=201)
+#         return Response(serializer.errors, status=400)
+
+
+# from rest_framework.permissions import IsAuthenticated
+# from rest_framework.response import Response
+# from rest_framework import status
+# from rest_framework.views import APIView
+# from .serializers import UserProfileSerializer, DogSerializer
+
+# class UserProfileView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def get(self, request):
+#         serializer = UserProfileSerializer(request.user)
+#         return Response(serializer.data)
+
+#     def put(self, request):
+#         serializer = UserProfileSerializer(request.user, data=request.data, partial=True)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# class DogProfileView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def get(self, request):
+#         dog = getattr(request.user, "dog", None)
+#         if dog:
+#             serializer = DogSerializer(dog)
+#             return Response(serializer.data)
+#         return Response({"detail": "Dog profile not found."}, status=404)
+
+#     def put(self, request):
+#         dog = getattr(request.user, "dog", None)
+#         if not dog:
+#             return Response({"detail": "Dog profile not found."}, status=404)
+#         serializer = DogSerializer(dog, data=request.data, partial=True)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors, status=400)
+
+
+
+# from rest_framework.views import APIView
+# from rest_framework.response import Response
+# from rest_framework import status
+# from django.core.mail import EmailMessage
+# from django.conf import settings
+# from rest_framework.permissions import AllowAny
+
+# class SendEmailAPIView(APIView):
+#     permission_classes = [AllowAny]
+
+#     def post(self, request):
+#         to_email = request.data.get('to')
+#         subject = request.data.get('subject')
+#         html_content = request.data.get('html')
+
+#         print("📩 Email Request Received:")
+#         print("To:", to_email)
+#         print("Subject:", subject)
+#         print("HTML snippet:", html_content[:100])  # just log the first 100 chars
+
+#         if not all([to_email, subject, html_content]):
+#             return Response({'error': 'Missing fields'}, status=status.HTTP_400_BAD_REQUEST)
+
+#         try:
+#             email = EmailMessage(
+#                 subject,
+#                 html_content,
+#                 settings.DEFAULT_FROM_EMAIL,
+#                 [to_email],
+#             )
+#             email.content_subtype = "html"
+#             email.send()
+#             return Response({'message': 'Email sent'}, status=status.HTTP_200_OK)
+#         except Exception as e:
+#             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+# from rest_framework.views import APIView
+# from rest_framework.response import Response
+# from rest_framework import status as drf_status
+# from .models import Order
+# from django.core.mail import EmailMessage
+# from django.conf import settings
+
+# class UpdateOrderStatusView(APIView):
+#     def post(self, request, order_id):
+#         new_status = request.data.get("status")
+
+#         if new_status not in dict(Order.STATUS_CHOICES):
+#             return Response({"error": "Invalid status."}, status=400)
+
+#         try:
+#             order = Order.objects.get(id=order_id)
+#             order.status = new_status
+#             order.save()
+
+#             # Send status update email
+#             email = EmailMessage(
+#                 subject=f"BarkBox Order Update: {new_status.replace('_', ' ').title()}",
+#                 body=f"Hi {order.first_name},\n\nYour BarkBox order is now: {new_status.replace('_', ' ').title()} 🐾\n\nThanks for being with us!\n\nBarkBox Team",
+#                 from_email=settings.DEFAULT_FROM_EMAIL,
+#                 to=[order.email],
+#             )
+#             email.send()
+
+#             return Response({"message": f"Order status updated to {new_status}"}, status=200)
+#         except Order.DoesNotExist:
+#             return Response({"error": "Order not found."}, status=404)
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from .serializers import SignupSerializer, OrderSerializer, UserProfileSerializer, DogSerializer
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.core.mail import EmailMessage
+from django.conf import settings
+from django.template.loader import render_to_string
+from .models import Order
+from datetime import date
+
+
+class SignupWithDogView(APIView):
+    def post(self, request):
+        serializer = SignupSerializer(data=request.data)
+        if serializer.is_valid():
+            result = serializer.save()
+
+            user_email = result["user"]["email"]
+            user_name = user_email.split("@")[0].capitalize()
+
+            html_content = f"""
+                <div style="font-family:Arial,sans-serif;padding:20px;background:#f9f9f9;">
+                    <h2 style="color:#4CAF50;">Welcome to BarkBox, {user_name}!</h2>
+                    <p>Thanks for signing up. We’re excited to send goodies your dog will love 🐶</p>
+                    <p>Explore your dashboard and update your preferences anytime.</p>
+                    <p style="margin-top:30px;">Cheers,<br/>The BarkBox Team</p>
+                </div>
+            """
+
+            try:
+                email = EmailMessage(
+                    subject="🎉 Welcome to BarkBox!",
+                    body=html_content,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    to=[user_email],
+                )
+                email.content_subtype = "html"
+                email.send()
+            except Exception as e:
+                print(f"❌ Failed to send welcome email: {e}")
+
+            return Response(result, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class OrderCheckoutView(APIView):
+    def post(self, request):
+        from .models import MonthlyBox
+        serializer = OrderSerializer(data=request.data)
+        if serializer.is_valid():
+            today = date.today()
+            try:
+                box = MonthlyBox.objects.get(month=today.month, year=today.year)
+            except MonthlyBox.DoesNotExist:
+                return Response({'error': 'No MonthlyBox defined for this month'}, status=400)
+
+            order = serializer.save()
+            order.monthly_box = box
+            order.save()
+
+            return Response({'order_id': order.id, 'message': 'Order placed successfully'}, status=201)
+        return Response(serializer.errors, status=400)
+
+
+class UserProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = UserProfileSerializer(request.user)
+        return Response(serializer.data)
+
+    def put(self, request):
+        serializer = UserProfileSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class DogProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        dog = getattr(request.user, "dog", None)
+        if dog:
+            serializer = DogSerializer(dog)
+            return Response(serializer.data)
+        return Response({"detail": "Dog profile not found."}, status=404)
+
+    def put(self, request):
+        dog = getattr(request.user, "dog", None)
+        if not dog:
+            return Response({"detail": "Dog profile not found."}, status=404)
+        serializer = DogSerializer(dog, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
+
+
+class SendEmailAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        to_email = request.data.get('to')
+        subject = request.data.get('subject')
+        html_content = request.data.get('html')
+
+        print("📩 Email Request Received:")
+        print("To:", to_email)
+        print("Subject:", subject)
+        print("HTML snippet:", html_content[:100])
+
+        if not all([to_email, subject, html_content]):
+            return Response({'error': 'Missing fields'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            email = EmailMessage(
+                subject,
+                html_content,
+                settings.DEFAULT_FROM_EMAIL,
+                [to_email],
+            )
+            email.content_subtype = "html"
+            email.send()
+            return Response({'message': 'Email sent'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class UpdateOrderStatusView(APIView):
+    def post(self, request, order_id):
+        new_status = request.data.get("status")
+
+        if new_status not in dict(Order.STATUS_CHOICES):
+            return Response({"error": "Invalid status."}, status=400)
+
+        try:
+            order = Order.objects.get(id=order_id)
+            order.status = new_status
+            order.save()
+
+            status_text = new_status.replace('_', ' ').title()
+
+            html_content = f"""
+                <div style="font-family: Arial, sans-serif; background: #f9f9f9; padding: 30px; border-radius: 10px; max-width: 600px; margin: auto; color: #333;">
+                  <h2 style="color: #4CAF50;">🐾 Hi {order.first_name},</h2>
+
+                  <p style="font-size: 16px;">
+                    We wanted to give you a quick update — your BarkBox order is now marked as:
+                    <strong style="color: #4CAF50;">{status_text}</strong> 🎉
+                  </p>
+
+                  <p style="font-size: 16px;">
+                    Our team is preparing everything to ensure your pup gets the best treats, toys, and tail-wagging joy 💌.
+                  </p>
+
+                  <div style="background: #fff; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 0 8px rgba(0,0,0,0.05);">
+                    <h3 style="margin-bottom: 10px;">📦 Order Details:</h3>
+                    <ul style="padding-left: 20px; font-size: 15px;">
+                      <li><strong>Plan:</strong> {order.get_selected_plan_display()}</li>
+                      <li><strong>Shipping To:</strong> {order.address}, {order.city}, {order.state}, {order.zip}</li>
+                      <li><strong>Status:</strong> {status_text}</li>
+                    </ul>
+                  </div>
+
+                  <p style="font-size: 15px;">Stay tuned — we’ll keep you posted on every step until your box arrives at your doorstep 🐶📬</p>
+
+                  <p style="margin-top: 30px; font-size: 15px;">
+                    Woofs & Wags,<br/>
+                    <strong>The BarkBox Team</strong> 💙
+                  </p>
+                </div>
+            """
+
+            email = EmailMessage(
+                subject=f"📦 BarkBox Order Update: {status_text}",
+                body=html_content,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[order.email],
+            )
+            email.content_subtype = "html"
+            email.send()
+
+            return Response({"message": f"Order status updated to {new_status}"}, status=200)
+        except Order.DoesNotExist:
+            return Response({"error": "Order not found."}, status=404)
+
+
+
+
+
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .models import Order
+from .serializers import OrderBoxHistorySerializer
+
+class UserBoxHistoryView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        orders = Order.objects.filter(user=request.user).select_related("monthly_box").order_by("-created_at")
+        serializer = OrderBoxHistorySerializer(orders, many=True)
+        return Response(serializer.data)
+
+
+
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes
+from .models import Order
+from .serializers import OrderRatingSerializer
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def rate_box(request, box_id):
+    try:
+        order = Order.objects.get(id=box_id, user=request.user)
+    except Order.DoesNotExist:
+        return Response({'error': 'Order not found.'}, status=404)
+
+    serializer = OrderRatingSerializer(order, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({'message': 'Rating updated.'})
+    return Response(serializer.errors, status=400)
+
+
+
+class RateBoxView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, order_id):
+        try:
+            order = Order.objects.get(id=order_id, user=request.user)
+            box = order.monthly_box
+            if not box:
+                return Response({"error": "Box not found for this order."}, status=404)
+
+            rating = request.data.get('rating')
+            if not isinstance(rating, int) or not (1 <= rating <= 5):
+                return Response({"error": "Rating must be an integer between 1 and 5."}, status=400)
+
+            # ✅ Update order's rating
+            order.rating = rating
+            order.save()
+
+            # ✅ Recalculate MonthlyBox rating from all linked orders
+            related_orders = box.orders.exclude(rating=0)
+            total_ratings = related_orders.count()
+            rating_sum = sum(o.rating for o in related_orders)
+            box.rating = round(rating_sum / total_ratings, 1)
+            box.total_ratings = total_ratings
+            box.rating_sum = rating_sum
+            box.save()
+
+            return Response({"message": "Thanks for rating!"}, status=200)
+
+        except Order.DoesNotExist:
+            return Response({"error": "Order not found or not yours."}, status=404)
+
+
+
+
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from .models import Order
+from .serializers import OrderSerializer
+from datetime import timedelta
+
+class CurrentSubscriptionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        order = Order.objects.filter(user=request.user).order_by('-created_at').first()
+        if not order:
+            return Response({'detail': 'No subscription found'}, status=404)
+
+        # Estimate next billing date and ship date
+        created = order.created_at.date()
+        next_billing = created.replace(day=15)
+        if created.day > 15:
+            next_billing = (created.replace(day=28) + timedelta(days=7)).replace(day=15)
+        ship_date = next_billing - timedelta(days=5)
+
+        data = {
+            "plan": order.get_selected_plan_display(),
+            "price": "$27/month",  # optionally store dynamically later
+            "next_billing": next_billing.strftime("%B %d, %Y"),
+            "ship_date": ship_date.strftime("%B %d"),
+            "dog_size": request.user.dog.get_size_display() if hasattr(request.user, 'dog') else "N/A",
+            "box_theme": order.monthly_box.name if order.monthly_box else "",
+            "box_month": order.monthly_box.month if order.monthly_box else None,
+            "box_year": order.monthly_box.year if order.monthly_box else None,
+            "box_image": order.monthly_box.image.url if order.monthly_box and order.monthly_box.image else None,
+        }
+        return Response(data)
