@@ -80,11 +80,7 @@ class DogSerializer(serializers.ModelSerializer):
         exclude = ['owner']
 
     def get_image_url(self, obj):
-        request = self.context.get('request')
-        if obj.image and hasattr(obj.image, 'url'):
-            return request.build_absolute_uri(obj.image.url) if request else obj.image.url
-        return None
-
+        return obj.image_public_url
 
 
 
