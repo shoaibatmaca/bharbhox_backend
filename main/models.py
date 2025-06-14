@@ -8,7 +8,7 @@ class Dog(models.Model):
     size = models.CharField(max_length=10, choices=[('small', 'Small'), ('medium', 'Medium'), ('large', 'Large')])
     primaryBreed = models.CharField(max_length=100, blank=True)
     secondaryBreed = models.CharField(max_length=100, blank=True)
-    adoptionDate = models.CharField(max_length=7, blank=True)  # MM/YYYY
+    adoptionDate = models.CharField(max_length=15, blank=True)  # MM/YYYY
     allergies = models.JSONField(default=list, blank=True)
     image = models.ImageField(storage=R2Storage(),upload_to='dogs/', null=True, blank=True)
 
@@ -29,7 +29,7 @@ from django.utils import timezone
 
 class MonthlyBox(models.Model):
     name = models.CharField(max_length=100)
-    image = models.ImageField(storage=R2Storage(),upload_to='boxes/')
+    image = models.ImageField(storage=R2Storage(),upload_to='boxes/', blank=True, null=True)
     month = models.IntegerField(editable=False)
     year = models.IntegerField(editable=False)
     day = models.IntegerField(editable=False)
