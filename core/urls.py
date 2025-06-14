@@ -30,6 +30,7 @@ urlpatterns = [
     path('api/dog/profile/', DogProfileView.as_view(), name='dog-profile'),
     path('api/send-email/', SendEmailAPIView.as_view(), name='send-email'),
     path('api/box-history/', UserBoxHistoryView.as_view(), name='box-history'),
+    path('api/skip-box/', SkipBoxView.as_view(), name='skip-box'),
     path('api/rate-box/<int:box_id>/', rate_box),
     path('api/current-subscription/', CurrentSubscriptionView.as_view()),
 

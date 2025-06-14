@@ -32,6 +32,23 @@ class SignupSerializer(serializers.Serializer):
             "refresh": str(refresh),
         }
 
+from rest_framework import serializers
+from .models import Order
+
+class SkipBoxSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = ['skipped_months']
+
+    def update(self, instance, validated_data):
+        # Increment skipped months
+        instance.skipped_months += 1
+        # Adjust the selected plan
+        current_plan_months = int(instance.selected_plan[:2])  # e.g., '6mo' => 6
+        instance.selected_plan = f"{current_plan_months + instance.skipped_months}mo"
+        instance.save()
+        return instance
+
 
 
 

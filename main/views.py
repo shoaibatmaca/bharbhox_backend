@@ -1072,23 +1072,31 @@ class CurrentSubscriptionView(APIView):
 
 
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from .models import Order
+from datetime import timedelta
+
 class SkipBoxView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         order = Order.objects.filter(user=request.user).first()
+        
         if not order:
             return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Increment skipped months and update the plan
+        # Increment skipped months
         order.skipped_months += 1
         order.save()
 
-        # Update subscription duration (if needed)
-        # For example: Adjust plan to 7 months from 6 months if 1 month is skipped
+        # Calculate remaining months
         remaining_months = int(order.selected_plan[:2])  # For example, '6mo' -> 6
-        new_duration = remaining_months + order.skipped_months
-        order.selected_plan = f"{new_duration}mo"  # Update plan dynamically
-        order.save()
-
-        return Response({"message": "Next box skipped successfully."}, status=status.HTTP_200_OK)
+        remaining_months += order.skipped_months  # Include skipped months
+        
+        # Return response
+        return Response({
+            "message": "Next box skipped successfully.",
+            "remaining_months": remaining_months  # Show updated remaining months after skip
+        }, status=status.HTTP_200_OK)
