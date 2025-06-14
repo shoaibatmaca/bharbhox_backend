@@ -195,6 +195,9 @@ from django.conf import settings
 from django.template.loader import render_to_string
 from .models import Order
 from datetime import date
+from django.contrib.auth import get_user_model
+
+
 
 
 class SignupWithDogView(APIView):
@@ -231,6 +234,7 @@ class SignupWithDogView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+
 # class OrderCheckoutView(APIView):
 #     def post(self, request):
 #         from .models import MonthlyBox
@@ -249,13 +253,23 @@ class SignupWithDogView(APIView):
 #             return Response({'order_id': order.id, 'message': 'Order placed successfully'}, status=201)
 #         return Response(serializer.errors, status=400)
 
+from datetime import timedelta
+from dateutil.relativedelta import relativedelta 
+User = get_user_model()
 
 class OrderCheckoutView(APIView):
     def post(self, request):
         from .models import MonthlyBox
         serializer = OrderSerializer(data=request.data)
         if serializer.is_valid():
+            user = User.objects.filter(email=serializer.validated_data['email']).first()
+            if not user:
+                return Response({'error': 'User not found'}, status=404)
+
+            # First box date logic (1 month after signup)
+            first_box_date = user.date_joined.date() + relativedelta(months=1)
             today = date.today()
+
             try:
                 box = MonthlyBox.objects.get(month=today.month, year=today.year)
             except MonthlyBox.DoesNotExist:
@@ -263,9 +277,13 @@ class OrderCheckoutView(APIView):
 
             order = serializer.save()
             order.monthly_box = box
+            order.total_treats_delivered = 2
+            order.total_toys_delivered = 3
+            order.created_at = first_box_date  # delay order creation to match first delivery logic
             order.save()
 
             return Response({'order_id': order.id, 'message': 'Order placed successfully'}, status=201)
+
         return Response(serializer.errors, status=400)
 
 
@@ -335,61 +353,118 @@ class SendEmailAPIView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+# class UpdateOrderStatusView(APIView):
+#     def post(self, request, order_id):
+#         new_status = request.data.get("status")
+
+#         if new_status not in dict(Order.STATUS_CHOICES):
+#             return Response({"error": "Invalid status."}, status=400)
+
+#         try:
+#             order = Order.objects.get(id=order_id)
+#             order.status = new_status
+#             order.save()
+
+#             status_text = new_status.replace('_', ' ').title()
+
+#             html_content = f"""
+#                 <div style="font-family: Arial, sans-serif; background: #f9f9f9; padding: 30px; border-radius: 10px; max-width: 600px; margin: auto; color: #333;">
+#                   <h2 style="color: #4CAF50;">🐾 Hi {order.first_name},</h2>
+
+#                   <p style="font-size: 16px;">
+#                     We wanted to give you a quick update — your BarkBox order is now marked as:
+#                     <strong style="color: #4CAF50;">{status_text}</strong> 🎉
+#                   </p>
+
+#                   <p style="font-size: 16px;">
+#                     Our team is preparing everything to ensure your pup gets the best treats, toys, and tail-wagging joy 💌.
+#                   </p>
+
+#                   <div style="background: #fff; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 0 8px rgba(0,0,0,0.05);">
+#                     <h3 style="margin-bottom: 10px;">📦 Order Details:</h3>
+#                     <ul style="padding-left: 20px; font-size: 15px;">
+#                       <li><strong>Plan:</strong> {order.get_selected_plan_display()}</li>
+#                       <li><strong>Shipping To:</strong> {order.address}, {order.city}, {order.state}, {order.zip}</li>
+#                       <li><strong>Status:</strong> {status_text}</li>
+#                     </ul>
+#                   </div>
+
+#                   <p style="font-size: 15px;">Stay tuned — we’ll keep you posted on every step until your box arrives at your doorstep 🐶📬</p>
+
+#                   <p style="margin-top: 30px; font-size: 15px;">
+#                     Woofs & Wags,<br/>
+#                     <strong>The BarkBox Team</strong> 💙
+#                   </p>
+#                 </div>
+#             """
+
+#             email = EmailMessage(
+#                 subject=f"📦 BarkBox Order Update: {status_text}",
+#                 body=html_content,
+#                 from_email=settings.DEFAULT_FROM_EMAIL,
+#                 to=[order.email],
+#             )
+#             email.content_subtype = "html"
+#             email.send()
+
+#             return Response({"message": f"Order status updated to {new_status}"}, status=200)
+#         except Order.DoesNotExist:
+#             return Response({"error": "Order not found."}, status=404)
+
+from dateutil.relativedelta import relativedelta
+
 class UpdateOrderStatusView(APIView):
     def post(self, request, order_id):
-        new_status = request.data.get("status")
+        from .models import MonthlyBox
 
+        new_status = request.data.get("status")
         if new_status not in dict(Order.STATUS_CHOICES):
             return Response({"error": "Invalid status."}, status=400)
 
         try:
             order = Order.objects.get(id=order_id)
             order.status = new_status
-            order.save()
 
-            status_text = new_status.replace('_', ' ').title()
+            # ✅ If delivered, increment & schedule next
+            if new_status == 'delivered':
+                order.total_treats_delivered += 2
+                order.total_toys_delivered += 3
+                order.save()
 
-            html_content = f"""
-                <div style="font-family: Arial, sans-serif; background: #f9f9f9; padding: 30px; border-radius: 10px; max-width: 600px; margin: auto; color: #333;">
-                  <h2 style="color: #4CAF50;">🐾 Hi {order.first_name},</h2>
+                # Schedule next order
+                next_date = order.created_at.date() + relativedelta(months=1)
+                today = date.today()
 
-                  <p style="font-size: 16px;">
-                    We wanted to give you a quick update — your BarkBox order is now marked as:
-                    <strong style="color: #4CAF50;">{status_text}</strong> 🎉
-                  </p>
+                try:
+                    next_box = MonthlyBox.objects.get(month=today.month, year=today.year)
+                except MonthlyBox.DoesNotExist:
+                    next_box = None
 
-                  <p style="font-size: 16px;">
-                    Our team is preparing everything to ensure your pup gets the best treats, toys, and tail-wagging joy 💌.
-                  </p>
+                Order.objects.create(
+                    user=order.user,
+                    billing_type=order.billing_type,
+                    selected_plan=order.selected_plan,
+                    first_name=order.first_name,
+                    last_name=order.last_name,
+                    email=order.email,
+                    address=order.address,
+                    city=order.city,
+                    state=order.state,
+                    zip=order.zip,
+                    use_shipping_as_billing=order.use_shipping_as_billing,
+                    payment_method=order.payment_method,
+                    status='confirmed',
+                    monthly_box=next_box,
+                    total_treats_delivered=order.total_treats_delivered,
+                    total_toys_delivered=order.total_toys_delivered,
+                    created_at=next_date,
+                )
 
-                  <div style="background: #fff; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 0 8px rgba(0,0,0,0.05);">
-                    <h3 style="margin-bottom: 10px;">📦 Order Details:</h3>
-                    <ul style="padding-left: 20px; font-size: 15px;">
-                      <li><strong>Plan:</strong> {order.get_selected_plan_display()}</li>
-                      <li><strong>Shipping To:</strong> {order.address}, {order.city}, {order.state}, {order.zip}</li>
-                      <li><strong>Status:</strong> {status_text}</li>
-                    </ul>
-                  </div>
-
-                  <p style="font-size: 15px;">Stay tuned — we’ll keep you posted on every step until your box arrives at your doorstep 🐶📬</p>
-
-                  <p style="margin-top: 30px; font-size: 15px;">
-                    Woofs & Wags,<br/>
-                    <strong>The BarkBox Team</strong> 💙
-                  </p>
-                </div>
-            """
-
-            email = EmailMessage(
-                subject=f"📦 BarkBox Order Update: {status_text}",
-                body=html_content,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[order.email],
-            )
-            email.content_subtype = "html"
-            email.send()
+            else:
+                order.save()
 
             return Response({"message": f"Order status updated to {new_status}"}, status=200)
+
         except Order.DoesNotExist:
             return Response({"error": "Order not found."}, status=404)
 

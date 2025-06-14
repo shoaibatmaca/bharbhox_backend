@@ -85,6 +85,15 @@ class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
     billing_type = models.CharField(max_length=20)
     selected_plan = models.CharField(max_length=20, choices=PLAN_CHOICES)
+    total_treats_delivered = models.IntegerField(default=0)
+    total_toys_delivered = models.IntegerField(default=0)
+    
+    def mark_as_delivered(self):
+        if self.status != 'delivered':
+            self.status = 'delivered'
+            self.total_treats_delivered += 2  # default per box
+            self.total_toys_delivered += 3
+            self.save()
 
     # shipping info
     first_name = models.CharField(max_length=50)
