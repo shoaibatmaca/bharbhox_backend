@@ -582,7 +582,13 @@ from datetime import timedelta
 #         }
 #         return Response(data)
 
-# ✅ Updated CurrentSubscriptionView with delivery stats
+from calendar import month_name
+from datetime import timedelta, date
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .models import Order, MonthlyBox
+
 class CurrentSubscriptionView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -591,14 +597,20 @@ class CurrentSubscriptionView(APIView):
         if not order:
             return Response({'detail': 'No subscription found'}, status=404)
 
-        # Estimate next billing date and ship date
+        # Estimate next billing and ship date
         created = order.created_at.date()
         next_billing = created.replace(day=15)
         if created.day > 15:
             next_billing = (created.replace(day=28) + timedelta(days=7)).replace(day=15)
         ship_date = next_billing - timedelta(days=5)
 
-        # Calculate stats across all orders
+        # Lookup next box
+        next_box = MonthlyBox.objects.filter(
+            year=next_billing.year,
+            month=next_billing.month
+        ).first()
+
+        # Aggregate delivery stats
         all_orders = Order.objects.filter(user=request.user)
         total_boxes_delivered = all_orders.filter(status="delivered").count()
         total_treats = sum(o.total_treats_delivered for o in all_orders)
@@ -606,16 +618,20 @@ class CurrentSubscriptionView(APIView):
 
         data = {
             "plan": order.get_selected_plan_display(),
-            "price": "$27/month",  # optionally store dynamically later
+            "price": "$27/month",
             "next_billing": next_billing.strftime("%B %d, %Y"),
             "ship_date": ship_date.strftime("%B %d"),
             "dog_size": request.user.dog.get_size_display() if hasattr(request.user, 'dog') else "N/A",
-            "box_theme": order.monthly_box.name if order.monthly_box else "",
-            "box_month": order.monthly_box.month if order.monthly_box else None,
-            "box_year": order.monthly_box.year if order.monthly_box else None,
-            "box_image": order.monthly_box.image.url if order.monthly_box and order.monthly_box.image else None,
             "total_boxes_delivered": total_boxes_delivered,
             "total_treats_delivered": total_treats,
             "total_toys_delivered": total_toys,
+            "next_box": {
+                "theme": next_box.name if next_box else None,
+                "month_name": month_name[next_billing.month],
+                "year": next_billing.year,
+                "ship_date": ship_date.strftime("%B %d, %Y"),
+                "image": next_box.image_public_url if next_box else None
+            } if next_box else None
         }
+
         return Response(data)
