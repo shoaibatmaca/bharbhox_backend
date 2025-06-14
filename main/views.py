@@ -1040,6 +1040,43 @@ from .models import Order, MonthlyBox
 from dateutil.relativedelta import relativedelta
 from datetime import timedelta
 
+# class CurrentSubscriptionView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def get(self, request):
+#         order = Order.objects.filter(user=request.user).order_by('-created_at').first()
+#         if not order:
+#             return Response({'detail': 'No subscription found'}, status=404)
+
+#         # Adjust next billing date based on skipped months
+#         skipped = order.skipped_months
+#         next_billing = order.created_at.date() + relativedelta(months=skipped + 1)  # Skip handling
+#         ship_date = next_billing - timedelta(days=5)
+
+#         # Fetch next and current box
+#         next_box = MonthlyBox.objects.filter(year=next_billing.year, month=next_billing.month).first()
+#         current_box = MonthlyBox.objects.filter(year=order.created_at.year, month=order.created_at.month).first()
+
+#         # Calculate remaining months based on the skipped months and selected plan
+#         plan_duration = int(order.selected_plan[:2])  # e.g., '6mo' -> 6
+#         remaining_months = plan_duration + order.skipped_months  # Add skipped months
+
+#         data = {
+#             "plan": order.get_selected_plan_display(),
+#             "remaining_months": remaining_months,
+#             "next_billing": next_billing.strftime("%B %d, %Y"),
+#             "ship_date": ship_date.strftime("%B %d"),
+#             "dog_size": request.user.dog.get_size_display() if hasattr(request.user, 'dog') else "N/A",
+#             "next_box": {
+#                 "theme": next_box.name if next_box else None,
+#                 "image": next_box.image_public_url if next_box else None
+#             } if next_box else None,
+#             "current_box": {
+#                 "theme": current_box.name if current_box else None,
+#                 "image": current_box.image_public_url if current_box else None
+#             } if current_box else None
+#         }
+#         return Response(data)
 class CurrentSubscriptionView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -1050,7 +1087,7 @@ class CurrentSubscriptionView(APIView):
 
         # Adjust next billing date based on skipped months
         skipped = order.skipped_months
-        next_billing = order.created_at.date() + relativedelta(months=skipped + 1)  # Skip handling
+        next_billing = order.created_at.date() + relativedelta(months=skipped + 1)
         ship_date = next_billing - timedelta(days=5)
 
         # Fetch next and current box
@@ -1061,12 +1098,20 @@ class CurrentSubscriptionView(APIView):
         plan_duration = int(order.selected_plan[:2])  # e.g., '6mo' -> 6
         remaining_months = plan_duration + order.skipped_months  # Add skipped months
 
+        # Aggregate delivery stats for the user
+        total_boxes_delivered = Order.objects.filter(user=request.user, status='delivered').count()
+        total_treats_delivered = sum(o.total_treats_delivered for o in Order.objects.filter(user=request.user, status='delivered'))
+        total_toys_delivered = sum(o.total_toys_delivered for o in Order.objects.filter(user=request.user, status='delivered'))
+
         data = {
             "plan": order.get_selected_plan_display(),
             "remaining_months": remaining_months,
             "next_billing": next_billing.strftime("%B %d, %Y"),
             "ship_date": ship_date.strftime("%B %d"),
             "dog_size": request.user.dog.get_size_display() if hasattr(request.user, 'dog') else "N/A",
+            "total_boxes_delivered": total_boxes_delivered,
+            "total_treats_delivered": total_treats_delivered,
+            "total_toys_delivered": total_toys_delivered,
             "next_box": {
                 "theme": next_box.name if next_box else None,
                 "image": next_box.image_public_url if next_box else None
