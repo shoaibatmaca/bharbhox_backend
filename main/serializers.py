@@ -44,7 +44,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        exclude = ['created_at', 'is_paid', 'user'] 
+        exclude = ['created_at', 'is_paid', 'user']  # we'll inject user manually
 
     def create(self, validated_data):
         email = validated_data.pop('email')
@@ -77,6 +77,9 @@ class DogSerializer(serializers.ModelSerializer):
 
     def get_image_url(self, obj):
         return obj.image_public_url
+
+
+
 
 
 class OrderBoxHistorySerializer(serializers.ModelSerializer):

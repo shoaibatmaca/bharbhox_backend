@@ -85,6 +85,7 @@ class Order(models.Model):
     selected_plan = models.CharField(max_length=20, choices=PLAN_CHOICES)
     total_treats_delivered = models.IntegerField(default=0)
     total_toys_delivered = models.IntegerField(default=0)
+    skipped_months = models.IntegerField(default=0)  # Track how many months skipped
     
     def mark_as_delivered(self):
         if self.status != 'delivered':

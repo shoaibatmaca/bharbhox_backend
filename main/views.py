@@ -987,6 +987,53 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import Order, MonthlyBox
 
+# class CurrentSubscriptionView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def get(self, request):
+#         order = Order.objects.filter(user=request.user).order_by('-created_at').first()
+#         if not order:
+#             return Response({'detail': 'No subscription found'}, status=404)
+
+#         # Estimate next billing and ship date
+#         created = order.created_at.date()
+#         next_billing = created.replace(day=15)
+#         if created.day > 15:
+#             next_billing = (created.replace(day=28) + timedelta(days=7)).replace(day=15)
+#         ship_date = next_billing - timedelta(days=5)
+
+#         # Lookup next box
+#         next_box = MonthlyBox.objects.filter(
+#             year=next_billing.year,
+#             month=next_billing.month
+#         ).first()
+
+#         # Aggregate delivery stats
+#         all_orders = Order.objects.filter(user=request.user)
+#         total_boxes_delivered = all_orders.filter(status="delivered").count()
+#         total_treats = sum(o.total_treats_delivered for o in all_orders)
+#         total_toys = sum(o.total_toys_delivered for o in all_orders)
+
+#         data = {
+#             "plan": order.get_selected_plan_display(),
+#             "price": "$27/month",
+#             "next_billing": next_billing.strftime("%B %d, %Y"),
+#             "ship_date": ship_date.strftime("%B %d"),
+#             "dog_size": request.user.dog.get_size_display() if hasattr(request.user, 'dog') else "N/A",
+#             "total_boxes_delivered": total_boxes_delivered,
+#             "total_treats_delivered": total_treats,
+#             "total_toys_delivered": total_toys,
+#             "next_box": {
+#                 "theme": next_box.name if next_box else None,
+#                 "month_name": month_name[next_billing.month],
+#                 "year": next_billing.year,
+#                 "ship_date": ship_date.strftime("%B %d, %Y"),
+#                 "image": next_box.image_public_url if next_box else None
+#             } if next_box else None
+#         }
+
+#         return Response(data)
+
 class CurrentSubscriptionView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -995,41 +1042,53 @@ class CurrentSubscriptionView(APIView):
         if not order:
             return Response({'detail': 'No subscription found'}, status=404)
 
-        # Estimate next billing and ship date
-        created = order.created_at.date()
-        next_billing = created.replace(day=15)
-        if created.day > 15:
-            next_billing = (created.replace(day=28) + timedelta(days=7)).replace(day=15)
+        # Adjust next billing date based on skipped months
+        skipped = order.skipped_months
+        next_billing = order.created_at.date() + relativedelta(months=skipped + 1)  # Skip handling
         ship_date = next_billing - timedelta(days=5)
 
-        # Lookup next box
-        next_box = MonthlyBox.objects.filter(
-            year=next_billing.year,
-            month=next_billing.month
-        ).first()
+        # Fetch next and current box
+        next_box = MonthlyBox.objects.filter(year=next_billing.year, month=next_billing.month).first()
+        current_box = MonthlyBox.objects.filter(year=order.created_at.year, month=order.created_at.month).first()
 
-        # Aggregate delivery stats
-        all_orders = Order.objects.filter(user=request.user)
-        total_boxes_delivered = all_orders.filter(status="delivered").count()
-        total_treats = sum(o.total_treats_delivered for o in all_orders)
-        total_toys = sum(o.total_toys_delivered for o in all_orders)
+        remaining_months = order.selected_plan  # Calculate based on skipped months
 
         data = {
             "plan": order.get_selected_plan_display(),
-            "price": "$27/month",
+            "remaining_months": remaining_months,
             "next_billing": next_billing.strftime("%B %d, %Y"),
             "ship_date": ship_date.strftime("%B %d"),
             "dog_size": request.user.dog.get_size_display() if hasattr(request.user, 'dog') else "N/A",
-            "total_boxes_delivered": total_boxes_delivered,
-            "total_treats_delivered": total_treats,
-            "total_toys_delivered": total_toys,
             "next_box": {
                 "theme": next_box.name if next_box else None,
-                "month_name": month_name[next_billing.month],
-                "year": next_billing.year,
-                "ship_date": ship_date.strftime("%B %d, %Y"),
                 "image": next_box.image_public_url if next_box else None
-            } if next_box else None
+            } if next_box else None,
+            "current_box": {
+                "theme": current_box.name if current_box else None,
+                "image": current_box.image_public_url if current_box else None
+            } if current_box else None
         }
-
         return Response(data)
+
+
+
+class SkipBoxView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        order = Order.objects.filter(user=request.user).first()
+        if not order:
+            return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Increment skipped months and update the plan
+        order.skipped_months += 1
+        order.save()
+
+        # Update subscription duration (if needed)
+        # For example: Adjust plan to 7 months from 6 months if 1 month is skipped
+        remaining_months = int(order.selected_plan[:2])  # For example, '6mo' -> 6
+        new_duration = remaining_months + order.skipped_months
+        order.selected_plan = f"{new_duration}mo"  # Update plan dynamically
+        order.save()
+
+        return Response({"message": "Next box skipped successfully."}, status=status.HTTP_200_OK)
