@@ -44,7 +44,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        exclude = ['created_at', 'is_paid', 'user']  # we'll inject user manually
+        exclude = ['created_at', 'is_paid', 'user'] 
 
     def create(self, validated_data):
         email = validated_data.pop('email')
@@ -79,25 +79,6 @@ class DogSerializer(serializers.ModelSerializer):
         return obj.image_public_url
 
 
-
-
-# class OrderBoxHistorySerializer(serializers.ModelSerializer):
-#     box_name = serializers.CharField(source='monthly_box.name', read_only=True)
-#     box_theme = serializers.CharField(source='monthly_box.name', read_only=True)
-#     box_image = serializers.ImageField(source='monthly_box.image', read_only=True)
-#     month = serializers.SerializerMethodField()
-#     year = serializers.SerializerMethodField()
-#     rating = serializers.IntegerField(read_only=True)  # ✅ ensure this line exists
-
-#     class Meta:
-#         model = Order
-#         fields = ['id', 'box_name', 'box_theme', 'box_image', 'month', 'year', 'status', 'rating']
-
-#     def get_month(self, obj):
-#         return obj.monthly_box.month if obj.monthly_box else None
-
-#     def get_year(self, obj):
-#         return obj.monthly_box.year if obj.monthly_box else None
 class OrderBoxHistorySerializer(serializers.ModelSerializer):
     box_name = serializers.CharField(source='monthly_box.name', read_only=True)
     box_theme = serializers.CharField(source='monthly_box.name', read_only=True)

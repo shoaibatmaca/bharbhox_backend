@@ -8,7 +8,7 @@ class Dog(models.Model):
     size = models.CharField(max_length=10, choices=[('small', 'Small'), ('medium', 'Medium'), ('large', 'Large')])
     primaryBreed = models.CharField(max_length=100, blank=True)
     secondaryBreed = models.CharField(max_length=100, blank=True)
-    adoptionDate = models.CharField(max_length=15, blank=True)  # MM/YYYY
+    adoptionDate = models.CharField(max_length=15, blank=True)
     allergies = models.JSONField(default=list, blank=True)
     image = models.ImageField(storage=R2Storage(),upload_to='dogs/', null=True, blank=True)
 
@@ -26,40 +26,6 @@ class Dog(models.Model):
 
 from django.db import models
 from django.utils import timezone
-
-# class MonthlyBox(models.Model):
-#     name = models.CharField(max_length=100)
-#     image = models.ImageField(storage=R2Storage(),upload_to='boxes/', blank=True, null=True)
-#     month = models.IntegerField(editable=False)
-#     year = models.IntegerField(editable=False)
-#     day = models.IntegerField(editable=False)
-#     rating = models.FloatField(default=0.0)
-#     total_ratings = models.IntegerField(default=0)
-#     rating_sum = models.IntegerField(default=0)
-
-#     def save(self, *args, **kwargs):
-#         # Automatically assign date fields on create only
-#         if not self.pk:
-#             now = timezone.now()
-#             self.month = now.month
-#             self.year = now.year
-#             self.day = now.day
-#         super().save(*args, **kwargs)
-
-#     def __str__(self):
-#         return f"{self.name} ({self.day}/{self.month}/{self.year})"
-
-#     @property
-#     def image_public_url(self):
-#         if self.image:
-#             return f"https://pub-73f82101c9e54e9b960f80a91111f8c6.r2.dev/{self.image.name}"
-#         return None
-
-#     def update_rating(self, new_rating):
-#         self.total_ratings += 1
-#         self.rating_sum += new_rating
-#         self.rating = round(self.rating_sum / self.total_ratings, 1)
-#         self.save()
 
 from django.db import models
 from django.utils import timezone
