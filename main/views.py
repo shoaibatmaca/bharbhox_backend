@@ -553,6 +553,36 @@ from .models import Order
 from .serializers import OrderSerializer
 from datetime import timedelta
 
+
+# class CurrentSubscriptionView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def get(self, request):
+#         order = Order.objects.filter(user=request.user).order_by('-created_at').first()
+#         if not order:
+#             return Response({'detail': 'No subscription found'}, status=404)
+
+#         # Estimate next billing date and ship date
+#         created = order.created_at.date()
+#         next_billing = created.replace(day=15)
+#         if created.day > 15:
+#             next_billing = (created.replace(day=28) + timedelta(days=7)).replace(day=15)
+#         ship_date = next_billing - timedelta(days=5)
+
+#         data = {
+#             "plan": order.get_selected_plan_display(),
+#             "price": "$27/month",  # optionally store dynamically later
+#             "next_billing": next_billing.strftime("%B %d, %Y"),
+#             "ship_date": ship_date.strftime("%B %d"),
+#             "dog_size": request.user.dog.get_size_display() if hasattr(request.user, 'dog') else "N/A",
+#             "box_theme": order.monthly_box.name if order.monthly_box else "",
+#             "box_month": order.monthly_box.month if order.monthly_box else None,
+#             "box_year": order.monthly_box.year if order.monthly_box else None,
+#             "box_image": order.monthly_box.image.url if order.monthly_box and order.monthly_box.image else None,
+#         }
+#         return Response(data)
+
+# ✅ Updated CurrentSubscriptionView with delivery stats
 class CurrentSubscriptionView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -568,6 +598,12 @@ class CurrentSubscriptionView(APIView):
             next_billing = (created.replace(day=28) + timedelta(days=7)).replace(day=15)
         ship_date = next_billing - timedelta(days=5)
 
+        # Calculate stats across all orders
+        all_orders = Order.objects.filter(user=request.user)
+        total_boxes_delivered = all_orders.filter(status="delivered").count()
+        total_treats = sum(o.total_treats_delivered for o in all_orders)
+        total_toys = sum(o.total_toys_delivered for o in all_orders)
+
         data = {
             "plan": order.get_selected_plan_display(),
             "price": "$27/month",  # optionally store dynamically later
@@ -578,5 +614,8 @@ class CurrentSubscriptionView(APIView):
             "box_month": order.monthly_box.month if order.monthly_box else None,
             "box_year": order.monthly_box.year if order.monthly_box else None,
             "box_image": order.monthly_box.image.url if order.monthly_box and order.monthly_box.image else None,
+            "total_boxes_delivered": total_boxes_delivered,
+            "total_treats_delivered": total_treats,
+            "total_toys_delivered": total_toys,
         }
         return Response(data)
