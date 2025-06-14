@@ -1033,6 +1033,12 @@ from .models import Order, MonthlyBox
 #         }
 
 #         return Response(data)
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from .models import Order, MonthlyBox
+from dateutil.relativedelta import relativedelta
+from datetime import timedelta
 
 class CurrentSubscriptionView(APIView):
     permission_classes = [IsAuthenticated]
@@ -1051,7 +1057,9 @@ class CurrentSubscriptionView(APIView):
         next_box = MonthlyBox.objects.filter(year=next_billing.year, month=next_billing.month).first()
         current_box = MonthlyBox.objects.filter(year=order.created_at.year, month=order.created_at.month).first()
 
-        remaining_months = order.selected_plan  # Calculate based on skipped months
+        # Calculate remaining months based on the skipped months and selected plan
+        plan_duration = int(order.selected_plan[:2])  # e.g., '6mo' -> 6
+        remaining_months = plan_duration + order.skipped_months  # Add skipped months
 
         data = {
             "plan": order.get_selected_plan_display(),
@@ -1076,7 +1084,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import Order
-from datetime import timedelta
+from rest_framework import status
 
 class SkipBoxView(APIView):
     permission_classes = [IsAuthenticated]
@@ -1091,12 +1099,17 @@ class SkipBoxView(APIView):
         order.skipped_months += 1
         order.save()
 
-        # Calculate remaining months
-        remaining_months = int(order.selected_plan[:2])  # For example, '6mo' -> 6
-        remaining_months += order.skipped_months  # Include skipped months
+        # Calculate remaining months based on selected plan and skipped months
+        plan_duration = int(order.selected_plan[:2])  # e.g., '6mo' -> 6
+        remaining_months = plan_duration + order.skipped_months  # Add skipped months
         
-        # Return response
+        # Update plan duration dynamically (e.g., 6 months becomes 7 after skipping)
+        order.selected_plan = f"{remaining_months}mo"
+        order.save()
+
+        # Return response with updated remaining months
         return Response({
             "message": "Next box skipped successfully.",
             "remaining_months": remaining_months  # Show updated remaining months after skip
         }, status=status.HTTP_200_OK)
+
